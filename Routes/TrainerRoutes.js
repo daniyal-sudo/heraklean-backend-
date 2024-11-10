@@ -19,7 +19,11 @@ import { register, login,createClient,createDietPlan,createProgramPlan,getTraine
     rescheduleMeetingRequest,
     cancelMeeting,
     notification,
-    searchAPI
+    searchAPI,
+    createSubscription,
+    deleteSubscription,
+    getSubscriptionsByTrainerId,
+    updateDietPlan
 //   markNotificationRead,
 //   markAllNotificationsRead
 } from '../Controllers/TrainerAuth.js';
@@ -30,9 +34,10 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.post('/createClient',authMiddleware, upload.single('profilePic'), createClient);
+router.post('/updateDietPlan', authMiddleware,updateDietPlan);
 router.post('/createDietPlan', authMiddleware,createDietPlan);
 router.post('/createProgramPlan',authMiddleware, createProgramPlan);
-router.get('/getTrainerDietPlans',authMiddleware, getTrainerDietPlans);
+router.post('/getTrainerDietPlans',authMiddleware, getTrainerDietPlans);
 router.get('/getTrainerProgramPlans',authMiddleware, getTrainerProgramPlans);
 router.get('/getTrainerClients',authMiddleware, getTrainerClients);
 router.get('/getClientOverview/:id',authMiddleware, getClientOverview);
@@ -54,6 +59,9 @@ router.put('/rescheduleMeetingRequest',authMiddleware, rescheduleMeetingRequest)
 router.post('/cancelMeeting', authMiddleware, cancelMeeting);
 router.get('/notification', authMiddleware, notification);
 router.get('/search', authMiddleware, searchAPI);
+router.post('/createSubscription', authMiddleware, createSubscription);
+router.delete('/deleteSubscription/:subscriptionId', authMiddleware, deleteSubscription);
+router.post('/getSubscriptionsByTrainerId', authMiddleware, getSubscriptionsByTrainerId);
 // router.post('/markNotificationRead', authMiddleware, markNotificationRead);
 // router.post('/markAllNotificationsRead', authMiddleware, markAllNotificationsRead);
 export default router;

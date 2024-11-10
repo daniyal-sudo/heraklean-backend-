@@ -14,7 +14,7 @@ const trainerSchema = new mongoose.Schema({
   }],
   dietPlans: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'DietPlan'
+    ref: 'MealPlan'
   }],
   clients: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +33,10 @@ const trainerSchema = new mongoose.Schema({
   meetingRequest:[{
     type:Object,
   }],
+  subscriptions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
+  }] // Array of subscription references
 });
 
 const Trainer = mongoose.model('Trainer', trainerSchema);

@@ -10,6 +10,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
+import Subscription from '../Models/Subscription.js';
+import MealPlan from '../Models/MealPlan.js';
 
 
 
@@ -252,32 +254,133 @@ export const createClient = async (req, res) => {
    
 
    
+// export const createDietPlan = async (req, res) => {
+//   const { dietTitle, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
+//   const trainer = req.trainer;
+
+//   try {
+//     const dietPlan = new DietPlan({
+//       dietTitle,
+//       monday,
+//       tuesday,
+//       wednesday,
+//       thursday,
+//       friday,
+//       saturday,
+//       sunday
+//     });
+
+//     await dietPlan.save();
+
+//     await Trainer.findByIdAndUpdate(trainer, {
+//       $push: { dietPlans: dietPlan._id }
+//     });
+
+//     res.status(201).json({
+//       message: 'Diet Plan created successfully',
+//       success: true,
+//       dietPlan
+//     });
+//   } catch (error) {
+//     console.error(error.message);
+//     res.status(500).send('Server error');
+//   }
+// };
+
+
 export const createDietPlan = async (req, res) => {
-  const { dietTitle, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
-  const trainer = req.trainer;
+  const { dietTitle, meals, trainerId } = req.body;
 
   try {
-    const dietPlan = new DietPlan({
+    const dietPlan = new MealPlan({
       dietTitle,
-      monday,
-      tuesday,
-      wednesday,
-      thursday,
-      friday,
-      saturday,
-      sunday
+      meals: meals.map((meal) => ({
+        title: meal.title,
+        protein: { name: meal.protein.name, grams: meal.protein.grams },
+        fats: { name: meal.fats.name, grams: meal.fats.grams },
+        carbs: { name: meal.carbs.name, grams: meal.carbs.grams },
+      })),
     });
 
     await dietPlan.save();
 
-    await Trainer.findByIdAndUpdate(trainer, {
-      $push: { dietPlans: dietPlan._id }
+    // Add the diet plan ID to the trainer's document
+    await Trainer.findByIdAndUpdate(trainerId, {
+      $push: { dietPlans: dietPlan._id },
     });
 
     res.status(201).json({
       message: 'Diet Plan created successfully',
       success: true,
-      dietPlan
+      dietPlan,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send('Server error');
+  }
+};
+
+// controllers/dietController.js
+export const updateDietPlan = async (req, res) => {
+  const { id, dietTitle, meals, trainerId } = req.body;
+
+  try {
+    const updatedDietPlan = await MealPlan.findByIdAndUpdate(
+      id,
+      {
+        dietTitle,
+        meals: meals.map((meal) => ({
+          title: meal.title,
+          protein: { name: meal.protein.name, grams: meal.protein.grams },
+          fats: { name: meal.fats.name, grams: meal.fats.grams },
+          carbs: { name: meal.carbs.name, grams: meal.carbs.grams },
+        })),
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedDietPlan) {
+      return res.status(404).json({
+        message: 'Diet Plan not found',
+        success: false,
+      });
+    }
+
+    // Update the trainer's diet plans list if not already included
+    await Trainer.findByIdAndUpdate(trainerId, {
+      $addToSet: { dietPlans: updatedDietPlan._id },
+    });
+
+    res.status(200).json({
+      message: 'Diet Plan updated successfully',
+      success: true,
+      dietPlan: updatedDietPlan,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send('Server error');
+  }
+};
+
+export const getTrainerDietPlans = async (req, res) => {
+  const { trainerId } = req.body;
+
+  try {
+    // Find the trainer by ID to get the list of diet plans
+    const trainer = await Trainer.findById(trainerId).populate('dietPlans');
+    
+    if (!trainer) {
+      return res.status(404).json({
+        message: 'Trainer not found',
+        success: false,
+      });
+    }
+
+    // Respond with the list of diet plans
+    res.status(200).json({
+      message: 'Diet Plans retrieved successfully',
+      success: true,
+      dietPlans: trainer.dietPlans,
     });
   } catch (error) {
     console.error(error.message);
@@ -322,24 +425,24 @@ export const createProgramPlan = async (req, res) => {
 };
 
 
-  export const getTrainerDietPlans = async (req, res) => {
-    try {
-      const trainerId = req.trainer;
+  // export const getTrainerDietPlans = async (req, res) => {
+  //   try {
+  //     const trainerId = req.trainer;
       
-      const trainer = await Trainer.findById(trainerId).populate('dietPlans');
-      if (!trainer) {
-        return res.status(404).json({ message: 'Trainer not found' });
-      }
+  //     const trainer = await Trainer.findById(trainerId).populate('dietPlans');
+  //     if (!trainer) {
+  //       return res.status(404).json({ message: 'Trainer not found' });
+  //     }
   
-      res.status(200).json({
-        success: true,
-        dietPlans: trainer.dietPlans
-      });
-    } catch (error) {
-      console.error(error.message);
-      res.status(500).send('Server error');
-    }
-  };
+  //     res.status(200).json({
+  //       success: true,
+  //       dietPlans: trainer.dietPlans
+  //     });
+  //   } catch (error) {
+  //     console.error(error.message);
+  //     res.status(500).send('Server error');
+  //   }
+  // };
 
 
   export const getTrainerProgramPlans = async (req, res) => {
@@ -1401,3 +1504,136 @@ export const searchAPI = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+// daniyal work 
+
+
+
+export const createSubscription = async (req, res) => {
+  const { subscriptionId, trainerId, planName, planDuration, planAmount, planBenefits } = req.body;
+
+  // Validate required fields
+  if (!trainerId || !planName || !planDuration || !planAmount || !planBenefits) {
+    return res.status(200).json({ success: false, message: "All fields are required." });
+  }
+
+  try {
+    // Check if the trainer exists
+    const trainer = await Trainer.findById(trainerId);
+    if (!trainer) {
+      return res.status(200).json({ success: false, message: "Trainer not found." });
+    }
+
+    if (subscriptionId) {
+      // If subscriptionId exists, we are editing an existing subscription
+      const subscription = await Subscription.findById(subscriptionId);
+      if (!subscription) {
+        return res.status(200).json({ success: false, message: "Subscription not found." });
+      }
+
+      // Update the subscription with new data
+      subscription.planName = planName;
+      subscription.planDuration = planDuration;
+      subscription.planAmount = planAmount;
+      subscription.planBenefits = planBenefits;
+
+      await subscription.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Subscription updated successfully.",
+        subscription,
+      });
+    } else {
+      // If subscriptionId is not provided, create a new subscription
+      const newSubscription = new Subscription({
+        planName,
+        planDuration,
+        planAmount,
+        planBenefits,
+        trainer: trainerId,
+      });
+
+      await newSubscription.save();
+
+      // Add the new subscription to the trainer's subscriptions array
+      trainer.subscriptions.push(newSubscription._id);
+      await trainer.save();
+
+      res.status(201).json({
+        success: true,
+        message: "Subscription created successfully.",
+        subscription: newSubscription,
+      });
+    }
+  } catch (error) {
+    console.error("Error creating/updating subscription:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+export const deleteSubscription = async (req, res) => {
+  const { subscriptionId } = req.params;
+
+  try {
+    // Find the subscription by ID
+    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: "Subscription not found." });
+    }
+
+    // Find the trainer linked to this subscription
+    const trainer = await Trainer.findById(subscription.trainer);
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: "Trainer not found." });
+    }
+
+    // Remove the subscription ID from the trainer's subscriptions array
+    trainer.subscriptions.pull(subscriptionId);
+    await trainer.save();
+
+    // Remove the subscription document using deleteOne or delete()
+    await Subscription.deleteOne({ _id: subscriptionId });  // or use subscription.delete()
+
+    res.status(200).json({
+      success: true,
+      message: "Subscription deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Error deleting subscription:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export  const getSubscriptionsByTrainerId = async (req, res) => {
+  const { trainerId } = req.body;
+
+  // Validate trainerId field
+  if (!trainerId) {
+    return res.status(400).json({ success: false, message: "Trainer ID is required." });
+  }
+
+  try {
+    // Check if the trainer exists
+    const trainer = await Trainer.findById(trainerId).populate('subscriptions');
+    if (!trainer) {
+      return res.status(404).json({ success: false, message: "Trainer not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      subscriptions: trainer.subscriptions,
+    });
+  } catch (error) {
+    console.error("Error fetching subscriptions by trainer ID:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
