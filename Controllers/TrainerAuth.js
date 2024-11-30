@@ -12,6 +12,7 @@ import multer from 'multer';
 import path from 'path';
 import Subscription from '../Models/Subscription.js';
 import MealPlan from '../Models/MealPlan.js';
+import moment from 'moment';
 
 
 
@@ -885,33 +886,62 @@ export const createProgramPlan = async (req, res) => {
           };
 
 
+      
+
           export const createMeetingRequest = async (req, res) => {
             try {
-              const { clientId, trainerId, day, time, date,trainingType, isRecurring,createdby } = req.body;
+              const { clientId, trainerId, time, date, trainingType, isRecurring, description } = req.body;
+              const newMeetingTime = moment(`${date} ${time}`, 'YYYY-MM-DD h:mm A');
+              // Validate required fields
+              if (!clientId || !trainerId || !date || !time || !trainingType || !description) {
+                return res.status(200).json({ success: false, message: "All fields are required" });
+              }
           
               // Check if both client and trainer exist
               const client = await Client.findById(clientId);
               const trainer = await Trainer.findById(trainerId);
           
               if (!client || !trainer) {
-                return res.status(404).json({ success: false, message: 'Client or Trainer not found' });
+                return res.status(200).json({ success: false, message: 'Client or Trainer not found' });
               }
+          
+              // Convert date and time to a moment object for validation
+              const meetingDateTime = moment(`${date} ${time}`, 'YYYY-MM-DD hh:mm A'); // Assume time is in 12-hour format
+              const currentDateTime = moment();
+          
+              // Check if the date and time is in the future
+              if (meetingDateTime.isBefore(currentDateTime)) {
+                return res.status(200).json({ success: false, message: 'The meeting time must be in the future' });
+              }
+          
+              // Check if there are any existing meetings for the same client, trainer, and date/time
+               // Find existing meetings for the same trainer on the same day
+    const existingMeetings = await Meeting.find({
+      trainer: trainerId,
+      date: date
+    }).select('time'); // Select only the time field to compare
 
-                if (!clientId || !trainerId || !day || !time) {
-                  return res.status(400).json({ success: false, message: "All fields are required" });
-                }
+    // Check for time conflicts (1 hour window)
+    for (const meeting of existingMeetings) {
+      const existingMeetingTime = moment(`${date} ${meeting.time}`, 'YYYY-MM-DD h:mm A');
+      
+      // Check if the new meeting time is within 1 hour before or after an existing meeting
+      if (newMeetingTime.isBetween(existingMeetingTime.clone().subtract(1, 'hour'), existingMeetingTime.clone().add(1, 'hour'))) {
+        return res.status(400).json({ success: false, message: 'Meeting time overlaps with an existing meeting.' });
+      }
+    }
           
               // Create a new meeting
               const meeting = new Meeting({
                 client: clientId,
                 trainer: trainerId,
-                day,
                 time,
                 date,
                 status: 'Pending',
                 trainingType,
                 isRecurring,
-                createdby:"trainer",
+                createdby: "trainer",
+                description
               });
           
               // Save the meeting
@@ -920,43 +950,51 @@ export const createProgramPlan = async (req, res) => {
               // Add the meeting to both the client's and trainer's `meetingRequest` field
               client.meetingRequest.push({
                 meetingId: savedMeeting._id,
-                day,
                 time,
                 date,
                 status: 'Pending',
                 trainingType,
                 isRecurring,
-                createdby:"trainer",
+                createdby: "trainer",
+                description
               });
           
               trainer.meetingRequest.push({
                 meetingId: savedMeeting._id,
-                day,
                 time,
                 date,
                 status: 'Pending',
                 trainingType,
                 isRecurring,
-                createdby:"trainer",
+                createdby: "trainer",
+                description
               });
-              const notificationMessage = `New meeting request from ${Trainer.Fname} for ${day} at ${time}`;
-              
           
-
-    // Add notification to trainer
-    await Client.findByIdAndUpdate(clientId, {
-      $push: { notification: notificationMessage }
-    });
+              const notificationMessage = `New meeting request from ${trainer.Fname} for ${date} at ${time}`;
+          
+              // Add notification to client
+              await Client.findByIdAndUpdate(clientId, {
+                $push: { notification: notificationMessage }
+              });
           
               // Save both client and trainer
               await client.save();
               await trainer.save();
           
-              res.status(200).json({ success: true, message: 'Meeting request created successfully', meeting: savedMeeting });
+              res.status(200).json({
+                success: true,
+                message: 'Meeting request created successfully',
+                meeting: savedMeeting
+              });
             } catch (error) {
-              res.status(500).json({ success: false, message: 'Error creating meeting request', error: error.message });
+              res.status(200).json({
+                success: false,
+                message: 'Error creating meeting request',
+                error: error.message
+              });
             }
           };
+          
           
 
 

@@ -11,16 +11,17 @@ const meetingSchema = new mongoose.Schema({
     ref: 'Trainer',
     required: true
   },
-  day: {
-    type: String,
-    required: true
-  },
+ 
   time: {
     type: String,
     required: true
   },
   date:{
-    type: Date,
+    type: String,
+    // default: Date.now
+  },
+  description:{
+    type: String,
     // default: Date.now
   },
   status: {

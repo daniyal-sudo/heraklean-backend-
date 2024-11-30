@@ -564,7 +564,7 @@ export const getUpcomingMeetingsForClient = async (req, res) => {
     // Format all the meetings data
     const formattedMeetings = allMeetings.map(meeting => ({
       _id: meeting._id,
-      day: meeting.day,
+      day: meeting.date || meeting.day ,
       time: meeting.time,
       status: meeting.status,
       trainingType: meeting.trainingType,
