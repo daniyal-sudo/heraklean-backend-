@@ -1,6 +1,36 @@
 import mongoose from 'mongoose';
 
-const dayPlanSchema = new mongoose.Schema({
+
+// Define the Exercise schema
+const exerciseSchema = new mongoose.Schema({
+  category: {
+    type: String,
+    required: true
+  },
+  exerciseName: {
+    type: String,
+ 
+  },
+  numberOfSets: {
+    type: Number,
+    
+  },
+  numberOfRepetitions: {
+    type: Number,
+   
+  },
+  workingLoad: {
+    type: Number,
+    
+  },
+  coachNotes: {
+    type: String,
+   
+  }
+});
+
+// Define the Plan schema
+const programPlanSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true
@@ -17,23 +47,14 @@ const dayPlanSchema = new mongoose.Schema({
     type: String, // E.g., "6 weeks"
     required: true
   },
-  
-});
-
-const programPlanSchema = new mongoose.Schema({
-  programTitle: {
-    type: String,
+  exercises: {
+    type: [exerciseSchema], // Array of exercises
     required: true
-  },
-  monday: dayPlanSchema,
-  tuesday: dayPlanSchema,
-  wednesday: dayPlanSchema,
-  thursday: dayPlanSchema,
-  friday: dayPlanSchema,
-  saturday: dayPlanSchema,
-  sunday: dayPlanSchema
+  }
 });
 
+// Create the model
 const ProgramPlan = mongoose.model('ProgramPlan', programPlanSchema);
 
 export default ProgramPlan;
+

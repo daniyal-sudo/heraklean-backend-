@@ -389,24 +389,21 @@ export const getTrainerDietPlans = async (req, res) => {
   }
 };
 
-
 export const createProgramPlan = async (req, res) => {
-  const { programTitle, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
-  const trainer = req.trainer; 
+  const { title, description, modules, duration, exercises } = req.body;
+  const trainer = req.trainer; // Extract the trainer ID from the request (e.g., from middleware)
 
   try {
-    // Create a new program plan with day-wise details
+    // Create a new program plan
     const programPlan = new ProgramPlan({
-      programTitle,
-      monday,
-      tuesday,
-      wednesday,
-      thursday,
-      friday,
-      saturday,
-      sunday
+      title,
+      description,
+      modules,
+      duration,
+      exercises
     });
 
+    // Save the program plan to the database
     await programPlan.save();
 
     // Associate the program plan with the trainer
@@ -414,6 +411,7 @@ export const createProgramPlan = async (req, res) => {
       $push: { programPlans: programPlan._id }
     });
 
+    // Respond with success
     res.status(201).json({
       message: 'Program Plan created successfully',
       success: true,
@@ -424,6 +422,92 @@ export const createProgramPlan = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+
+export const editProgramPlan = async (req, res) => {
+  const { id, title, description, modules, duration, exercises } = req.body; // Extract ID and other fields from the payload
+  const trainerId = req.trainer; // Assuming `req.trainer` contains the authenticated trainer's ID
+
+  try {
+    // Find the program plan by ID
+    const programPlan = await ProgramPlan.findById(id);
+
+    if (!programPlan) {
+      return res.status(404).json({
+        message: "Program Plan not found",
+        success: false,
+      });
+    }
+
+    // Check if the program plan is associated with the current trainer
+    const isTrainerAuthorized = await Trainer.findOne({
+      _id: trainerId,
+      programPlans: id, // Check if the trainer owns this program plan
+    });
+
+    if (!isTrainerAuthorized) {
+      return res.status(403).json({
+        message: "You are not authorized to edit this program plan.",
+        success: false,
+      });
+    }
+
+    // Update the fields
+    programPlan.title = title || programPlan.title;
+    programPlan.description = description || programPlan.description;
+    programPlan.modules = modules || programPlan.modules;
+    programPlan.duration = duration || programPlan.duration;
+    programPlan.exercises = exercises || programPlan.exercises;
+
+    // Save the updated plan
+    const updatedProgramPlan = await programPlan.save();
+
+    res.status(200).json({
+      message: "Program Plan updated successfully",
+      success: true,
+      programPlan: updatedProgramPlan,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server error");
+  }
+};
+
+
+// export const createProgramPlan = async (req, res) => {
+//   const { programTitle, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
+//   const trainer = req.trainer; 
+
+//   try {
+//     // Create a new program plan with day-wise details
+//     const programPlan = new ProgramPlan({
+//       programTitle,
+//       monday,
+//       tuesday,
+//       wednesday,
+//       thursday,
+//       friday,
+//       saturday,
+//       sunday
+//     });
+
+//     await programPlan.save();
+
+//     // Associate the program plan with the trainer
+//     await Trainer.findByIdAndUpdate(trainer, {
+//       $push: { programPlans: programPlan._id }
+//     });
+
+//     res.status(201).json({
+//       message: 'Program Plan created successfully',
+//       success: true,
+//       programPlan
+//     });
+//   } catch (error) {
+//     console.error(error.message);
+//     res.status(500).send('Server error');
+//   }
+// };
 
 
   // export const getTrainerDietPlans = async (req, res) => {
@@ -1261,6 +1345,28 @@ export const rescheduleMeetingRequest = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized action' });
     }
 
+    // Validate 1-hour range for the new time
+    const existingMeetings = await Meeting.find({
+      trainer: trainerId,
+      date: newDate || meeting.date, // Check for the same date
+      _id: { $ne: meetingId }, // Exclude the current meeting being rescheduled
+    });
+
+    const isTimeConflict = existingMeetings.some((existingMeeting) => {
+      const existingTime = moment(existingMeeting.time, "h:mm A");
+      const newMeetingTime = moment(newTime, "h:mm A");
+
+      // Check if the time difference is less than 1 hour
+      return Math.abs(existingTime.diff(newMeetingTime, 'minutes')) < 60;
+    });
+
+    if (isTimeConflict) {
+      return res.status(400).json({
+        success: false,
+        message: `Time conflict: The trainer already has a meeting within 1 hour of ${newTime}. Please select another time.`,
+      });
+    }
+
     // Remove the old meeting from both the client and trainer records
     await Client.findByIdAndUpdate(meeting.client, {
       $pull: { 
@@ -1279,76 +1385,39 @@ export const rescheduleMeetingRequest = async (req, res) => {
     // Delete the old meeting
     await Meeting.findByIdAndDelete(meetingId);
 
-    // Check the status of the meeting
-    if (meeting.status === 'Approved') {
-      // Create a new approved meeting with the updated details
-      const newMeeting = new Meeting({
-        client: meeting.client,
-        trainer: meeting.trainer,
-        day: newDay || meeting.day,
-        time: newTime || meeting.time,
-        date: newDate || meeting.date,
-        trainingType: meeting.trainingType,
-        isRecurring: meeting.isRecurring,
-        status: 'Approved' // Set status to Approved
-      });
+    // Create a new meeting with updated details
+    const newMeeting = new Meeting({
+      client: meeting.client,
+      trainer: meeting.trainer,
+      day: newDay || meeting.day,
+      time: newTime || meeting.time,
+      date: newDate || meeting.date,
+      trainingType: meeting.trainingType,
+      isRecurring: meeting.isRecurring,
+      status: meeting.status, // Keep the status the same
+    });
 
-      await newMeeting.save();
+    await newMeeting.save();
 
-      // Notify the client and update their records
-      const notificationMessage = `Meeting rescheduled to ${newDay} at ${newTime} with Trainer ${meeting.trainer.Fname}`;
-     
-  
-      await Client.findByIdAndUpdate(meeting.client, {
-        $push: { commingMeeting: newMeeting._id, notification: notificationMessage }
-      });
+    // Notify the client and update their records
+    const notificationMessage = `Meeting rescheduled to ${newDay} at ${newTime} with Trainer ${meeting.trainer.Fname}`;
 
-      // Update the trainer's records
-      await Trainer.findByIdAndUpdate(trainerId, {
-        $push: { commingMeeting: newMeeting._id, notification: notificationMessage }
-      });
+    await Client.findByIdAndUpdate(meeting.client, {
+      $push: { commingMeeting: newMeeting._id, notification: notificationMessage }
+    });
 
-      return res.status(200).json({ success: true, message: 'Meeting rescheduled successfully', meeting: newMeeting });
+    await Trainer.findByIdAndUpdate(trainerId, {
+      $push: { commingMeeting: newMeeting._id, notification: notificationMessage }
+    });
 
-    } else if (meeting.status === 'Pending') {
-      // Create a new meeting request with the updated details
-      const newMeetingRequest = new Meeting({
-        client: meeting.client,
-        trainer: meeting.trainer,
-        day: newDay,
-        time: newTime,
-        date: newDate,
-        trainingType: meeting.trainingType,
-        isRecurring: meeting.isRecurring,
-        status: 'Pending',
-        createdby: 'trainer'
-      });
-
-      const savedMeetingRequest = await newMeetingRequest.save();
-
-      // Notify the client and update their records
-      const notificationMessage = `New meeting request from Trainer ${meeting.trainer.Fname} for ${newDay} at ${newTime}`;
-
-      await Client.findByIdAndUpdate(meeting.client, {
-        $push: { meetingRequest: savedMeetingRequest, notification: notificationMessage }
-      });
-
-      // Update the trainer's records
-      await Trainer.findByIdAndUpdate(trainerId, {
-        $push: { meetingRequest: savedMeetingRequest, notification: notificationMessage }
-      });
-
-      return res.status(200).json({ success: true, message: 'Meeting request rescheduled successfully', meeting: savedMeetingRequest });
-
-    } else {
-      return res.status(400).json({ success: false, message: 'Invalid meeting status' });
-    }
+    return res.status(200).json({ success: true, message: 'Meeting rescheduled successfully', meeting: newMeeting });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Error rescheduling meeting', error: error.message });
   }
 };
+
 
 export const cancelMeeting = async (req, res) => {
   try {

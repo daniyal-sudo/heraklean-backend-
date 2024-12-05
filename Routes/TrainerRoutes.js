@@ -23,7 +23,8 @@ import { register, login,createClient,createDietPlan,createProgramPlan,getTraine
     createSubscription,
     deleteSubscription,
     getSubscriptionsByTrainerId,
-    updateDietPlan
+    updateDietPlan,
+    editProgramPlan
 //   markNotificationRead,
 //   markAllNotificationsRead
 } from '../Controllers/TrainerAuth.js';
@@ -37,6 +38,7 @@ router.post('/createClient',authMiddleware, upload.single('profilePic'), createC
 router.post('/updateDietPlan', authMiddleware,updateDietPlan);
 router.post('/createDietPlan', authMiddleware,createDietPlan);
 router.post('/createProgramPlan',authMiddleware, createProgramPlan);
+router.post('/editProgramPlan',authMiddleware, editProgramPlan);
 router.post('/getTrainerDietPlans',authMiddleware, getTrainerDietPlans);
 router.get('/getTrainerProgramPlans',authMiddleware, getTrainerProgramPlans);
 router.get('/getTrainerClients',authMiddleware, getTrainerClients);
