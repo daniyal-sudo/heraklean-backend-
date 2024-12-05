@@ -7,6 +7,7 @@ import workoutSetSchema from '../Models/WorkoutSet.js';
 import { sendMail } from './../Helper/sendMail.js';
 import mongoose from 'mongoose';
 
+const JWT_SECRET= 'heraklean'
 
 export const register = async (req, res) => {
   const { fullname, email, password, confirmPassword } = req.body;
@@ -39,7 +40,7 @@ export const register = async (req, res) => {
 
     // Create and return JWT
     const payload = { clientId: client._id };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 
     res.status(201).json({
       message: 'Client registered successfully',
@@ -71,7 +72,7 @@ export const login = async (req, res) => {
 
     // Create and return JWT
     const payload = { clientId: client._id };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
 
     res.status(200).json({
       message: 'Login successful',
@@ -272,7 +273,7 @@ export const getActiveNutrition = async (req, res) => {
       if (!client) return res.status(404).json({ message: 'Client not found' });
   
       // Create a reset token
-      const resetToken = jwt.sign({ userId: client._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const resetToken = jwt.sign({ userId: client._id }, JWT_SECRET, { expiresIn: '1h' });
       
       // Log reset token for debugging
       console.log('Reset Token:', resetToken);
@@ -307,7 +308,7 @@ export const getActiveNutrition = async (req, res) => {
       // Verify the JWT token
       let decoded;
       try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        decoded = jwt.verify(token, JWT_SECRET);
       } catch (error) {
         return res.status(400).json({ message: 'Invalid or expired reset token' });
       }

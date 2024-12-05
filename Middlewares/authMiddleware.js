@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import Trainer from './../Models/Trainer.js'; // Adjust the path as needed
 import Client from './../Models/Client.js'
 
-
+const JWT_SECRET= 'heraklean'
 const authMiddleware = async (req, res, next) => {
   // Get token from headers
   const token = req.headers['authorization']?.split(' ')[1];
@@ -13,7 +13,7 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Find the trainer by ID
     const trainer = await Trainer.findById(decoded.trainerId);
@@ -43,7 +43,7 @@ export const clientAuthMiddleware = async (req, res, next) => {
 
   try {
     // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Find the client by ID
     const client = await Client.findById(decoded.clientId);

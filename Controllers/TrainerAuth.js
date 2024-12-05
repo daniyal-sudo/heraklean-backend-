@@ -15,6 +15,8 @@ import MealPlan from '../Models/MealPlan.js';
 import moment from 'moment';
 
 
+const JWT_SECRET= 'heraklean'
+
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -112,7 +114,7 @@ export const login = async (req, res) => {
   
       // Create and return JWT
       const payload = { trainerId: trainer.id };
-      const token = jwt.sign(payload, process.env.JWT_SECRET);
+      const token = jwt.sign(payload, JWT_SECRET);
   
       res.status(200).json({
         message: 'Login successful',
@@ -859,7 +861,7 @@ export const editProgramPlan = async (req, res) => {
               if (!trainer) return res.status(404).json({ message: 'Trainer not found' });
           
               // Create a reset token
-              const resetToken = jwt.sign({ userId: trainer._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+              const resetToken = jwt.sign({ userId: trainer._id }, JWT_SECRET, { expiresIn: '1h' });
               
               // Log reset token for debugging
               console.log('Reset Token:', resetToken);
@@ -888,7 +890,7 @@ export const editProgramPlan = async (req, res) => {
           
             try {
               // Verify the reset token
-              jwt.verify(resetToken, process.env.JWT_SECRET, async (err, decoded) => {
+              jwt.verify(resetToken, JWT_SECRET, async (err, decoded) => {
                 if (err) return res.status(400).json({ message: 'Invalid or expired reset token' });
           
                 // Find user by ID from the token
