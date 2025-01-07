@@ -156,7 +156,7 @@ export const createClient = async (req, res) => {
     let client = await Client.findOne({ email });
 
     // Fetch the selected diet, program plans, and subscription
-    const dietPlan = await DietPlan.findById(attachDietId);
+    const dietPlan = await MealPlan.findById(attachDietId);
     const programPlan = await ProgramPlan.findById(attachProgramId);
     const subscription = await Subscription.findById(subscriptionId);
 
