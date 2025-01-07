@@ -143,7 +143,9 @@ export const createClient = async (req, res) => {
     fullname, 
     subamount, 
     email, 
-    password // Added password field
+    password, 
+    subscriptionId, // Subscription ID from request body
+    subscription_start_Date // Subscription start date from request body
   } = req.body;
 
   const trainerId = req.trainer._id; // Assuming trainer ID is available in the request
@@ -153,13 +155,20 @@ export const createClient = async (req, res) => {
     // Check if client already exists
     let client = await Client.findOne({ email });
 
-    // Fetch the selected diet and program plans
+    // Fetch the selected diet, program plans, and subscription
     const dietPlan = await DietPlan.findById(attachDietId);
     const programPlan = await ProgramPlan.findById(attachProgramId);
+    const subscription = await Subscription.findById(subscriptionId);
+
     if (!dietPlan || !programPlan) {
       console.error("Diet plan not found:", attachDietId);
       console.error("Program plan not found:", attachProgramId);
       return res.status(400).json({ message: 'Invalid diet or program plan selected' });
+    }
+
+    if (!subscription) {
+      console.error("Subscription not found:", subscriptionId);
+      return res.status(400).json({ message: 'Invalid subscription ID' });
     }
 
     if (client) {
@@ -173,6 +182,10 @@ export const createClient = async (req, res) => {
       client.trainer = trainerId;
       client.ActiveNutrition.push(dietPlan);
       client.ActivePlan.push(programPlan);
+
+      // Update subscription details
+      client.subscription = subscription; // Add the complete subscription object
+      client.subscription_start_Date = subscription_start_Date; // Update subscription start date
 
       // Update password if provided
       if (password) {
@@ -197,7 +210,9 @@ export const createClient = async (req, res) => {
             attachProgram: client.attachProgram,
             ActiveNutrition: client.ActiveNutrition,
             ActivePlan: client.ActivePlan,
-            trainer: client.trainer
+            trainer: client.trainer,
+            subscription: client.subscription, // Include subscription details
+            subscription_start_Date: client.subscription_start_Date
           }
         },
       });
@@ -219,6 +234,8 @@ export const createClient = async (req, res) => {
         trainer: trainerId,
         ActiveNutrition: [dietPlan],
         ActivePlan: [programPlan],
+        subscription, // Save the complete subscription object
+        subscription_start_Date // Save the subscription start date
       });
 
       await client.save();
@@ -238,7 +255,9 @@ export const createClient = async (req, res) => {
             attachProgram: client.attachProgram,
             ActiveNutrition: client.ActiveNutrition,
             ActivePlan: client.ActivePlan,
-            trainer: client.trainer
+            trainer: client.trainer,
+            subscription: client.subscription, // Include subscription details
+            subscription_start_Date: client.subscription_start_Date
           }
         },
       });
@@ -254,6 +273,7 @@ export const createClient = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
    
 
    

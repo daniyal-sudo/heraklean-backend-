@@ -26,6 +26,9 @@ const exerciseSchema = new mongoose.Schema({
   coachNotes: {
     type: String,
    
+  },
+  dayName:{
+    type: Number,
   }
 });
 
@@ -37,15 +40,15 @@ const programPlanSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    required: false
   },
   modules: {
     type: [String], // Array of strings for module names
-    required: true
+    required: false
   },
   duration: {
     type: String, // E.g., "6 weeks"
-    required: true
+    required: false
   },
   exercises: {
     type: [exerciseSchema], // Array of exercises
