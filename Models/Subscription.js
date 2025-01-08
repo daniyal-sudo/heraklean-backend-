@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 const SubscriptionSchema = new mongoose.Schema({
   planName: { type: String, required: true },
-  planDuration: { type: Number, required: true },
+  planDuration: { type: String, required: true },
   planAmount: { type: Number, required: true },
   planBenefits: { type: [String], required: true },
   startDate: { type: Date, default: Date.now },
