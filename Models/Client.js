@@ -18,7 +18,7 @@
       trim: true
     },
     subscription: {
-      type: String,
+      type: Object,
     },
     subamount: Number,
     fullname: {

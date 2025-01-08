@@ -184,7 +184,7 @@ export const createClient = async (req, res) => {
       client.ActivePlan.push(programPlan);
 
       // Update subscription details
-      client.subscription = subscription; // Add the complete subscription object
+      client.subscription.push(subscription); // Add the complete subscription object
       client.subscription_start_Date = subscription_start_Date; // Update subscription start date
 
       // Update password if provided
@@ -234,7 +234,7 @@ export const createClient = async (req, res) => {
         trainer: trainerId,
         ActiveNutrition: [dietPlan],
         ActivePlan: [programPlan],
-        subscription, // Save the complete subscription object
+        subscription:[subscription], // Save the complete subscription object
         subscription_start_Date // Save the subscription start date
       });
 
